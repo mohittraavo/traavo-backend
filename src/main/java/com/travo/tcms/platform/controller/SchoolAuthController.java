@@ -5,7 +5,6 @@ import com.travo.tcms.platform.dto.SchoolAuthResponse;
 import com.travo.tcms.platform.service.SchoolAuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@CrossOrigin(origins = "*")
 @RequestMapping("/school/auth")
 public class SchoolAuthController {
   private final SchoolAuthService service;
