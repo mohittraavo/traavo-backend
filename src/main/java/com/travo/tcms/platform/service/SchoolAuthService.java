@@ -7,8 +7,11 @@ import com.travo.tcms.platform.dto.SchoolAuthResponse;
 import com.travo.tcms.platform.dto.SchoolAuthUserResponse;
 import com.travo.tcms.platform.entity.SchoolSessionEntity;
 import com.travo.tcms.platform.entity.SchoolUserEntity;
+import com.travo.tcms.platform.entity.SchoolEntity;
+import com.travo.tcms.platform.repository.SchoolRepository;
 import com.travo.tcms.platform.repository.SchoolSessionRepository;
 import com.travo.tcms.platform.repository.SchoolUserRepository;
+import com.travo.tcms.platform.repository.SubscriptionRepository;
 import io.jsonwebtoken.Claims;
 import java.time.Instant;
 import java.util.List;
@@ -24,12 +27,17 @@ public class SchoolAuthService {
 
   private final SchoolUserRepository userRepository;
   private final SchoolSessionRepository sessionRepository;
+  private final SchoolRepository schoolRepository;
+  private final SubscriptionRepository subscriptionRepository;
   private final JwtUtil jwtUtil;
   private final PasswordHasher passwords;
 
-  public SchoolAuthService(SchoolUserRepository userRepository, SchoolSessionRepository sessionRepository, JwtUtil jwtUtil, PasswordHasher passwords) {
+  public SchoolAuthService(SchoolUserRepository userRepository, SchoolSessionRepository sessionRepository, SchoolRepository schoolRepository,
+      SubscriptionRepository subscriptionRepository, JwtUtil jwtUtil, PasswordHasher passwords) {
     this.userRepository = userRepository;
     this.sessionRepository = sessionRepository;
+    this.schoolRepository = schoolRepository;
+    this.subscriptionRepository = subscriptionRepository;
     this.jwtUtil = jwtUtil;
     this.passwords = passwords;
   }
@@ -43,6 +51,7 @@ public class SchoolAuthService {
     if (!passwords.isHashed(user.password)) {
       user.password = passwords.hash(request.password());
     }
+    requireActiveSubscription(user);
     if (user.status != null && !"ACTIVE".equalsIgnoreCase(user.status)) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Account is not active");
     }
@@ -85,6 +94,20 @@ public class SchoolAuthService {
     }
     return userRepository.findById(session.userId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+  }
+
+  private void requireActiveSubscription(SchoolUserEntity user) {
+    if (user.schoolId == null) {
+      return;
+    }
+    SchoolEntity school = schoolRepository.findById(user.schoolId).orElse(null);
+    if (school == null) {
+      return;
+    }
+    boolean active = subscriptionRepository.findFirstBySchoolExternalIdAndStatusIgnoreCase(school.externalId, "ACTIVE").isPresent();
+    if (!active) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "School access is not active yet.");
+    }
   }
 
   private void requireSchoolAudience(Claims claims) {

@@ -24,7 +24,7 @@ public class SubscriptionEmailService {
     this.templateEngine = templateEngine;
   }
 
-  public void sendSubscriptionEmail(SchoolEntity school, SubscriptionPlanRecord plan) {
+  public boolean sendSubscriptionEmail(SchoolEntity school, SubscriptionPlanRecord plan, String loginEmail, String temporaryPassword, String portalUrl) {
     try {
       Context ctx = new Context();
       ctx.setVariable("schoolName", school.schoolName);
@@ -33,23 +33,30 @@ public class SubscriptionEmailService {
       ctx.setVariable("price", plan.offerPrice() != null ? plan.offerPrice() : plan.price());
       ctx.setVariable("billingCycle", plan.billingCycle());
       ctx.setVariable("features", plan.features());
+      ctx.setVariable("loginEmail", loginEmail);
+      ctx.setVariable("temporaryPassword", temporaryPassword);
+      ctx.setVariable("portalUrl", portalUrl);
 
       String html = templateEngine.process("subscription-email/index", ctx);
 
       MimeMessage message = mailSender.createMimeMessage();
       MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-      final String to = school.schoolAdminEmail != null ? school.schoolAdminEmail : school.email;
-      helper.setTo(to);
-      helper.setSubject("Subscription Offer from Traavo — " + plan.name());
+      helper.setTo(loginEmail);
+      helper.setSubject("Your Traavo school access — " + school.schoolName);
       helper.setText(html, true);
 
-      String summary = "Plan: " + plan.name() + "\nPrice: " + (plan.offerPrice() != null ? plan.offerPrice() : plan.price()) + "\nBilling: " + plan.billingCycle();
+      String summary = "Plan: " + plan.name()
+          + "\nSchool access: " + portalUrl
+          + "\nEmail: " + loginEmail
+          + (temporaryPassword == null ? "\nPassword: use the password already issued for this email." : "\nTemporary password: " + temporaryPassword);
       helper.addAttachment("subscription-summary.txt", new ByteArrayResource(summary.getBytes()));
 
       mailSender.send(message);
+      return true;
     } catch (MessagingException | RuntimeException e) {
       System.err.println("Info: subscription email skipped for school " + school.externalId + " because mail is not configured: " + e.getMessage());
+      return false;
     }
   }
 }

@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,17 +30,22 @@ public class SubscriptionManagementService {
   private final SchoolRepository schoolRepository;
   private final SubscriptionAuditRepository auditRepository;
   private final SubscriptionEmailService emailService;
+  private final SchoolAccessService schoolAccessService;
   private final ObjectMapper objectMapper;
+  private final String portalUrl;
 
   public SubscriptionManagementService(SubscriptionRepository subscriptionRepository, SubscriptionPlanService planService,
       SchoolRepository schoolRepository, SubscriptionAuditRepository auditRepository,
-      SubscriptionEmailService emailService, ObjectMapper objectMapper) {
+      SubscriptionEmailService emailService, SchoolAccessService schoolAccessService, ObjectMapper objectMapper,
+      @Value("${school.portal-url:https://school.traavo.in}") String portalUrl) {
     this.subscriptionRepository = subscriptionRepository;
     this.planService = planService;
     this.schoolRepository = schoolRepository;
     this.auditRepository = auditRepository;
     this.emailService = emailService;
+    this.schoolAccessService = schoolAccessService;
     this.objectMapper = objectMapper;
+    this.portalUrl = portalUrl;
   }
 
   public List<Map<String, Object>> listSubscriptions() {
@@ -81,8 +87,17 @@ public class SubscriptionManagementService {
     school.subscriptionGracePeriodDays = gracePeriodDays; school.subscriptionGracePeriodEndDate = entity.gracePeriodEndDate;
     school.featureFlagsCsv = String.join("|", listJson(plan.featuresJson).stream().map(String::valueOf).toList()); schoolRepository.save(school);
     audit(entity, "SUBSCRIPTION_ASSIGNED", null, toMap(entity));
-    emailService.sendSubscriptionEmail(school, new SubscriptionPlanRecord(plan.externalId, plan.name, plan.price, plan.offerPrice, plan.billingCycle, plan.studentLimit, plan.campusLimit, listJson(plan.featuresJson).stream().map(String::valueOf).toList()));
-    return toMap(entity);
+    SchoolAccessService.SchoolAccess access = schoolAccessService.provision(school);
+    SubscriptionPlanRecord planRecord = new SubscriptionPlanRecord(plan.externalId, plan.name, plan.price, plan.offerPrice, plan.billingCycle, plan.studentLimit, plan.campusLimit, listJson(plan.featuresJson).stream().map(String::valueOf).toList());
+    boolean emailSent = emailService.sendSubscriptionEmail(school, planRecord, access.email(), access.temporaryPassword(), portalUrl);
+    Map<String, Object> result = toMap(entity);
+    result.put("schoolAccessEmail", access.email());
+    result.put("portalUrl", portalUrl);
+    result.put("emailSent", emailSent);
+    if (access.temporaryPassword() != null) {
+      result.put("temporaryPassword", access.temporaryPassword());
+    }
+    return result;
   }
 
   public Map<String, Object> changeStatus(String id, String status, String action) {

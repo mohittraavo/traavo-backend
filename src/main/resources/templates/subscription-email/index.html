@@ -18,8 +18,17 @@
     <p>Hello <strong th:text="${contactName}">Administrator</strong>,</p>
 
     <p>
-        Thanks for choosing Traavo. Below are the subscription details.
+        Thanks for choosing Traavo. Your school access is ready.
     </p>
+
+    <div class="details">
+        <p><strong>Sign in:</strong> <a th:href="${portalUrl}" th:text="${portalUrl}">https://school.traavo.in</a></p>
+        <p><strong>Email:</strong> <span th:text="${loginEmail}">admin@school.edu</span></p>
+        <p th:if="${temporaryPassword != null}"><strong>Temporary password:</strong> <span th:text="${temporaryPassword}">password</span></p>
+        <p th:if="${temporaryPassword == null}">Use the password already issued for this email.</p>
+    </div>
+
+    <p>Below are the subscription details.</p>
 
     <div class="details">
         <p><strong>School:</strong> <span th:text="${schoolName}">School Name</span></p>
