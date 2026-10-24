@@ -1,0 +1,4 @@
+EmployeeCode,FirstName,LastName,Department,Designation,Category,Phone,Email,Campus,JoiningDate,EmploymentType
+EMP-801,Ravi,Sharma,Accounts & Finance,Senior Accountant,Accounts & Finance,+91 9811122334,ravi.s@school.edu,Main Campus,2024-01-15,Full Time
+EMP-802,Pooja,Nair,Library Services,Chief Librarian,Library Services,+91 9845011223,pooja.n@school.edu,Main Campus,2023-07-01,Full Time
+EMP-803,Ajay,Kumar,Transport,Transport Supervisor,Transport,+91 9810055443,ajay.k@school.edu,Main Campus,2022-04-10,Full Time
